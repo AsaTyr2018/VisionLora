@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="mb-4">{{ entry.name or entry.filename }}</h1>
+<div class="mb-3">
+  Categories:
+  {% if entry.categories %}
+    {% for cat in entry.categories %}
+    <span class="badge bg-secondary me-1 d-inline-flex align-items-center">
+      {{ cat.name }}
+      {% if user and user.role == 'admin' %}
+      <form method="post" action="/unassign_category" class="ms-1 d-inline">
+        <input type="hidden" name="filename" value="{{ entry.filename }}">
+        <input type="hidden" name="category_id" value="{{ cat.id }}">
+        <button type="submit" class="btn-close btn-close-white btn-sm" style="float:none"></button>
+      </form>
+      {% endif %}
+    </span>
+    {% endfor %}
+  {% else %}
+    <span class="text-muted">None</span>
+  {% endif %}
+</div>
+  <div class="d-flex align-items-start mb-3 gap-2">
+    {% if user and user.role == 'admin' %}
+      {% if categories %}
+      <form method="post" action="/assign_category" style="max-width: 300px;">
+        <input type="hidden" name="filename" value="{{ entry.filename }}">
+        <div class="input-group">
+          <select class="form-select" name="category_id">
+            {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-outline-primary" type="submit">Add</button>
+        </div>
+      </form>
+      {% endif %}
+      <form method="post" action="/categories" style="max-width: 300px;">
+        <div class="input-group">
+          <input type="text" class="form-control" name="name" placeholder="New category">
+          <button class="btn btn-outline-secondary" type="submit">Create</button>
+        </div>
+      </form>
+    {% endif %}
+    <a class="btn btn-primary" href="/uploads/{{ entry.filename }}" download>Download</a>
+</div>
+{% if user and user.role == 'admin' %}
+<form method="post" action="/delete">
+  <div class="d-flex justify-content-end mb-2 gap-2">
+    <button class="btn btn-danger btn-sm" type="submit">Remove Selected</button>
+    <a class="btn btn-secondary btn-sm" href="/upload_previews?lora={{ entry.filename|replace('.safetensors','') }}">Upload Images</a>
+  </div>
+  <div class="preview-grid mb-3">
+    {% for img in entry.previews %}
+    <div class="position-relative">
+      <a href="{{ img }}" target="_blank"><img src="{{ img }}" class="img-fluid rounded"></a>
+      <input class="form-check-input position-absolute top-0 end-0 m-1" type="checkbox" name="files" value="{{ img|replace('/uploads/','') }}">
+    </div>
+    {% endfor %}
+  </div>
+</form>
+{% else %}
+<div class="preview-grid mb-3">
+  {% for img in entry.previews %}
+  <div class="position-relative">
+    <a href="{{ img }}" target="_blank"><img src="{{ img }}" class="img-fluid rounded"></a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+<div class="table-responsive">
+  <table class="table table-dark table-striped metadata-table">
+    <tbody>
+      {% for key, value in entry.metadata|dictsort %}
+      <tr><th>{{ key }}</th><td>{{ value }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

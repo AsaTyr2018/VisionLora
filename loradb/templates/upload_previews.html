@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+{% if lora %}
+<h1 class="mb-4">Upload Previews for {{ lora }}</h1>
+<form method="post" action="/upload_previews" enctype="multipart/form-data">
+  <input type="hidden" name="lora" value="{{ lora }}">
+  <div class="mb-3">
+    <input class="form-control" type="file" name="files" multiple accept=".png,.jpg,.jpeg,.gif,.zip" required>
+  </div>
+  <button class="btn btn-primary" type="submit">Upload</button>
+</form>
+{% else %}
+<h1 class="mb-4">Upload Preview Zip</h1>
+<form method="post" action="/upload_previews" enctype="multipart/form-data">
+  <div class="mb-3">
+    <input class="form-control" type="file" name="files" accept=".zip" required>
+  </div>
+  <button class="btn btn-primary" type="submit">Upload</button>
+</form>
+{% endif %}
+{% endblock %}

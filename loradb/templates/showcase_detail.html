@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="mb-4">{{ entry.name or entry.filename }}</h1>
+<div class="preview-grid mb-3">
+  {% for img in entry.previews %}
+  <div class="position-relative">
+    <a href="{{ img }}" target="_blank"><img src="{{ img }}" class="img-fluid rounded"></a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
