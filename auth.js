@@ -32,6 +32,14 @@ class Auth {
   getUserById(id, cb) {
     this.db.get(`SELECT id, username, role FROM users WHERE id = ?`, [id], cb);
   }
+
+  listUsers(cb) {
+    this.db.all(`SELECT username, role FROM users ORDER BY username`, cb);
+  }
+
+  deleteUser(username, cb) {
+    this.db.run(`DELETE FROM users WHERE username = ?`, [username], cb || (() => {}));
+  }
 }
 
 module.exports = new Auth();
