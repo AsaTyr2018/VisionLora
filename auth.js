@@ -1,13 +1,9 @@
-const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
-const path = require('path');
-const config = require('./config');
-
-const DB_PATH = path.join(config.BASE_DIR, 'loradb', 'search_index', 'index.db');
+const indexer = require('./indexer');
 
 class Auth {
   constructor() {
-    this.db = new sqlite3.Database(DB_PATH);
+    this.db = indexer.db;
     this.ensureTable();
   }
 
