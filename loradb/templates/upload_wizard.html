@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="mb-4">Upload Wizard</h1>
+<div id="step1">
+  <h3 class="mb-3">1. Upload safetensors</h3>
+  <div id="drop-safetensors" class="drop-area mb-2">Drag & Drop .safetensors here or click</div>
+  <div id="safetensors-info" class="text-secondary small mb-2"></div>
+  <input id="safetensors-input" type="file" accept=".safetensors" class="d-none">
+  <button id="upload-safetensors" class="btn btn-primary">Upload</button>
+  <div id="safetensors-progress" class="progress mt-3 d-none">
+    <div class="progress-bar" role="progressbar" style="width:0%">0%</div>
+  </div>
+</div>
+<div id="step2" style="display:none;">
+  <h3 class="mb-3">2. Upload previews</h3>
+  <div id="drop-previews" class="drop-area mb-2">Drag & Drop images or ZIP here or click</div>
+  <div id="previews-info" class="text-secondary small mb-2"></div>
+  <input id="previews-input" type="file" multiple accept=".png,.jpg,.jpeg,.gif,.zip" webkitdirectory directory class="d-none">
+  <button id="upload-previews" class="btn btn-primary">Upload Previews</button>
+  <div id="previews-progress" class="progress mt-3 d-none">
+    <div class="progress-bar" role="progressbar" style="width:0%">0%</div>
+  </div>
+</div>
+<script>
+function updateInfo(inputId, files) {
+  const info = document.getElementById(inputId.replace('input', 'info'));
+  if (!info) return;
+  if (!files || files.length === 0) {
+    info.textContent = '';
+  } else if (files.length === 1) {
+    info.textContent = files[0].name;
+  } else {
+    info.textContent = files.length + ' files selected';
+  }
+}
+
+async function gatherFiles(dtItems) {
+  const files = [];
+  for (const item of dtItems) {
+    if (item.kind !== 'file') continue;
+    const entry = item.webkitGetAsEntry && item.webkitGetAsEntry();
+    if (entry && entry.isDirectory) {
+      files.push(...await traverseDir(entry));
+    } else {
+      const f = item.getAsFile();
+      if (f) files.push(f);
+    }
+  }
+  return files;
+}
+
+function traverseDir(entry) {
+  return new Promise(resolve => {
+    const reader = entry.createReader();
+    const all = [];
+    const read = () => {
+      reader.readEntries(async entries => {
+        if (!entries.length) { resolve(all); return; }
+        let pending = entries.length;
+        for (const e of entries) {
+          if (e.isFile) {
+            e.file(f => { all.push(f); if (!--pending) read(); });
+          } else {
+            traverseDir(e).then(f => { all.push(...f); if (!--pending) read(); });
+          }
+        }
+      });
+    };
+    read();
+  });
+}
+
+function setupArea(areaId, inputId) {
+  const area = document.getElementById(areaId);
+  const input = document.getElementById(inputId);
+  area.addEventListener('click', () => input.click());
+  area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('dragover'); });
+  area.addEventListener('dragleave', () => area.classList.remove('dragover'));
+  area.addEventListener('drop', async e => {
+    e.preventDefault();
+    area.classList.remove('dragover');
+    const dropped = await gatherFiles(e.dataTransfer.items);
+    const dt = new DataTransfer();
+    for (const f of dropped) dt.items.add(f);
+    input.files = dt.files;
+    updateInfo(inputId, dt.files);
+  });
+  input.addEventListener('change', () => updateInfo(inputId, input.files));
+}
+setupArea('drop-safetensors', 'safetensors-input');
+setupArea('drop-previews', 'previews-input');
+const uploadBtn1 = document.getElementById('upload-safetensors');
+const uploadBtn2 = document.getElementById('upload-previews');
+const step1 = document.getElementById('step1');
+const step2 = document.getElementById('step2');
+const stProgress = document.querySelector('#safetensors-progress .progress-bar');
+const stContainer = document.getElementById('safetensors-progress');
+const prProgress = document.querySelector('#previews-progress .progress-bar');
+const prContainer = document.getElementById('previews-progress');
+let loraStem = '';
+let loraFilename = '';
+
+function uploadWithProgress(url, fd, bar, container) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    container.classList.remove('d-none');
+    bar.style.width = '0%';
+    bar.textContent = '0%';
+    xhr.upload.addEventListener('progress', e => {
+      if (e.lengthComputable) {
+        const pct = Math.round((e.loaded / e.total) * 100);
+        bar.style.width = pct + '%';
+        bar.textContent = pct + '%';
+      }
+    });
+    xhr.onload = () => {
+      container.classList.add('d-none');
+      if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.response);
+      else reject(new Error('upload failed'));
+    };
+    xhr.onerror = () => {
+      container.classList.add('d-none');
+      reject(new Error('upload failed'));
+    };
+    xhr.send(fd);
+  });
+}
+
+uploadBtn1.addEventListener('click', async () => {
+  const file = document.getElementById('safetensors-input').files[0];
+  if (!file) {
+    alert('Please select a .safetensors file first.');
+    return;
+  }
+  const fd = new FormData();
+  fd.append('files', file);
+  try {
+    const resp = await uploadWithProgress('/upload', fd, stProgress, stContainer);
+    try {
+      const result = JSON.parse(resp)[0];
+      loraFilename = result?.filename || file.name;
+    } catch (e) {
+      loraFilename = file.name;
+    }
+    loraStem = loraFilename.replace(/\.safetensors$/i, '');
+    step1.style.display = 'none';
+    step2.style.display = 'block';
+    updateInfo('safetensors-input', []);
+  } catch (err) {
+    alert('Upload failed');
+  }
+});
+
+uploadBtn2.addEventListener('click', async () => {
+  const files = document.getElementById('previews-input').files;
+  if (!files.length) {
+    alert('Please select preview images or a ZIP file.');
+    return;
+  }
+  const fd = new FormData();
+  for (const f of files) fd.append('files', f);
+  fd.append('lora', loraStem);
+  try {
+    await uploadWithProgress('/upload_previews', fd, prProgress, prContainer);
+    window.location.href = '/detail/' + loraFilename;
+  } catch (err) {
+    alert('Preview upload failed');
+  }
+});
+</script>
+{% endblock %}

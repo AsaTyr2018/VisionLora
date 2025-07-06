@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="mb-4">Dashboard</h1>
+<p>
+  <a href="/upload_wizard" class="btn btn-success me-2">Upload Models</a>
+  <a href="/grid" class="btn btn-primary">View Gallery</a>
+</p>
+<div class="row text-center mb-4">
+  <div class="col-sm-6 col-lg-3 mb-3">
+    <div class="card bg-secondary h-100">
+      <div class="card-body">
+        <div class="h2">{{ stats.lora_count }}</div>
+        <div>LoRAs</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3 mb-3">
+    <div class="card bg-secondary h-100">
+      <div class="card-body">
+        <div class="h2">{{ stats.preview_count }}</div>
+        <div>Images</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3 mb-3">
+    <div class="card bg-secondary h-100">
+      <div class="card-body">
+        <div class="h2">{{ stats.category_count }}</div>
+        <div>Categories</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3 mb-3">
+    <div class="card bg-secondary h-100">
+      <div class="card-body">
+        <div class="h2">{{ (stats.storage_volume / 1024**2)|round(1) }} MB</div>
+        <div>LoRA Size</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="mb-4">
+  <h2 class="h5">Tag Cloud</h2>
+  <div class="category-cloud">
+    {% for cat in stats.top_categories %}
+    <a href="/grid?q=&category={{ cat.id }}" style="font-size: {{ cat.size }}rem;" class="me-2">
+      {{ cat.name }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+<div class="row">
+  <div class="col-md-6 mb-4">
+    <h2 class="h5">Recently Modified Categories</h2>
+    <ul class="list-unstyled">
+      {% for cat in recent_categories %}
+      <li><a href="/grid?q=&category={{ cat.id }}">{{ cat.name }}</a></li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="col-md-6 mb-4">
+    <h2 class="h5">Recently Added LoRAs</h2>
+    <ul class="list-unstyled">
+      {% for l in recent_loras %}
+      <li><a href="/detail/{{ l.filename }}">{{ l.name or l.filename }}</a></li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

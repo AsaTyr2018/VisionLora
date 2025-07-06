@@ -1,0 +1,4 @@
+node_modules
+loradb/uploads
+npm-debug.log*
+loradb/search_index

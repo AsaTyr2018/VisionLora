@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="mb-4">Category Administration</h1>
+{% if user and user.role == 'admin' %}
+<form method="post" action="/categories" class="mb-3 d-flex" style="max-width:400px;">
+  <input type="text" name="name" class="form-control me-2" placeholder="New category" required>
+  <button class="btn btn-primary" type="submit">Add</button>
+</form>
+{% endif %}
+<table class="table table-dark table-striped">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>LoRAs</th>
+      {% if user and user.role == 'admin' %}<th></th>{% endif %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for cat in categories %}
+    <tr>
+      <td>{{ cat.name }}</td>
+      <td>{{ cat.count }}</td>
+      {% if user and user.role == 'admin' %}
+      <td>
+        {% if cat.id != 0 %}
+        <form method="post" action="/delete_category" onsubmit="return confirm('Delete category {{ cat.name }}?');">
+          <input type="hidden" name="category_id" value="{{ cat.id }}">
+          <button class="btn btn-sm btn-danger">Delete</button>
+        </form>
+        {% endif %}
+      </td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

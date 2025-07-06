@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="mb-4">Model Showcase</h1>
+<div class="gallery-grid">
+  {% for entry in entries %}
+  <div class="gallery-item position-relative">
+    {% if entry.preview_url %}
+    <img src="{{ entry.preview_url }}" alt="preview">
+    {% endif %}
+    <div class="title-overlay">
+      <a href="/showcase_detail/{{ entry.filename }}" class="stretched-link text-light text-decoration-none">
+        {{ entry.name or entry.filename }}
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

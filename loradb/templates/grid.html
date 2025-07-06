@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="mb-4">LoRA Gallery</h1>
+<form method="get" action="/grid" class="row g-2 mb-3" style="max-width: 600px;">
+  <div class="col">
+    <input type="text" class="form-control" name="q" placeholder="Search" value="{{ query }}">
+  </div>
+  <div class="col">
+    <select class="form-select" name="category">
+      <option value="">All categories</option>
+      {% for cat in categories %}
+      <option value="{{ cat.id }}" {% if selected_category==cat.id|string %}selected{% endif %}>{{ cat.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-outline-secondary" type="submit">&#128269;</button>
+  </div>
+</form>
+<form method="post" action="/delete">
+  {% if user and user.role == 'admin' %}
+  <div class="d-flex justify-content-end mb-2 gap-2">
+    <button class="btn btn-danger btn-sm" type="submit">Remove Selected</button>
+    <button class="btn btn-secondary btn-sm" type="submit" formaction="/bulk_assign" formmethod="post">Add to Category</button>
+  </div>
+  {% endif %}
+  <div class="gallery-grid" id="gallery">
+    {% for entry in entries %}
+    <div class="gallery-item position-relative">
+      {% if entry.preview_url %}
+      <img src="{{ entry.preview_url }}" alt="preview">
+      {% endif %}
+      {% if user and user.role == 'admin' %}
+      <input class="form-check-input position-absolute m-2 top-0 end-0" type="checkbox" name="files" value="{{ entry.filename }}">
+      {% endif %}
+      <div class="title-overlay">
+        <a href="/detail/{{ entry.filename }}" class="stretched-link text-light text-decoration-none">{{ entry.name or entry.filename }}</a>
+        {% if entry.categories %}
+        <div class="small text-info">
+          {% for cat in entry.categories %}
+            {{ cat }}{% if not loop.last %}, {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div id="load-sentinel" class="text-center py-2 text-secondary">Loading...</div>
+</form>
+<script>
+const limit = {{ limit }};
+let offset = {{ entries|length }};
+const query = "{{ query }}";
+const category = "{{ selected_category }}";
+const isAdmin = {{ 'true' if user and user.role == 'admin' else 'false' }};
+let loading = false;
+
+async function loadMore() {
+  if (loading) return;
+  loading = true;
+  const params = new URLSearchParams({ q: query || '*', offset: offset, limit: limit });
+  if (category) params.append('category', category);
+  const resp = await fetch('/grid_data?' + params.toString());
+  if (!resp.ok) {
+    loading = false;
+    return;
+  }
+  const data = await resp.json();
+  const gallery = document.getElementById('gallery');
+  for (const entry of data) {
+    const item = document.createElement('div');
+    item.className = 'gallery-item position-relative';
+    if (entry.preview_url) {
+      const img = document.createElement('img');
+      img.src = entry.preview_url;
+      img.alt = 'preview';
+      item.appendChild(img);
+    }
+    if (isAdmin) {
+      const cb = document.createElement('input');
+      cb.className = 'form-check-input position-absolute m-2 top-0 end-0';
+      cb.type = 'checkbox';
+      cb.name = 'files';
+      cb.value = entry.filename;
+      item.appendChild(cb);
+    }
+    const overlay = document.createElement('div');
+    overlay.className = 'title-overlay';
+    const link = document.createElement('a');
+    link.href = '/detail/' + entry.filename;
+    link.className = 'stretched-link text-light text-decoration-none';
+    link.textContent = entry.name || entry.filename;
+    overlay.appendChild(link);
+    if (entry.categories && entry.categories.length) {
+      const info = document.createElement('div');
+      info.className = 'small text-info';
+      info.textContent = entry.categories.join(', ');
+      overlay.appendChild(info);
+    }
+    item.appendChild(overlay);
+    gallery.appendChild(item);
+  }
+  offset += data.length;
+  loading = false;
+  if (data.length < limit) {
+    observer.disconnect();
+    sentinel.textContent = 'No more results';
+  }
+}
+
+const sentinel = document.getElementById('load-sentinel');
+const observer = new IntersectionObserver((entries) => {
+  if (entries[0].isIntersecting) {
+    loadMore();
+  }
+});
+observer.observe(sentinel);
+</script>
+{% endblock %}

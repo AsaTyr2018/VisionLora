@@ -1,0 +1,126 @@
+body {
+  background: radial-gradient(circle at top left, #20232a, #0d0f11);
+  color: #f8f9fa;
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+}
+a { color: #58a6ff; }
+h1 { margin-top: 1rem; font-weight: 600; }
+
+/* Gallery grid with fixed 5x10 style */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-auto-rows: 180px;
+  gap: 1rem;
+}
+
+.gallery-item {
+  position: relative;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gallery-item:hover {
+  transform: translateY(-5px) scale(1.03);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-item input[type="checkbox"] {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  z-index: 2;
+}
+
+.gallery-item .title-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0));
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  color: #fff;
+}
+
+/* Grid for preview images in the detail view */
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.5rem;
+}
+
+.preview-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.preview-grid input[type="checkbox"] {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  z-index: 2;
+}
+
+/* Metadata table formatting */
+.metadata-table th,
+.metadata-table td {
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.metadata-table {
+  table-layout: fixed;
+}
+
+.metadata-table th {
+  width: 25%;
+  color: #66d9e8;
+  font-weight: 600;
+}
+
+.metadata-table tr:nth-child(even) {
+  background-color: #212529;
+}
+
+/* Drag and drop areas used in the upload wizard */
+.drop-area {
+  border: 2px dashed #6c757d;
+  border-radius: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+  color: #adb5bd;
+  cursor: pointer;
+}
+
+.drop-area.dragover {
+  background-color: rgba(108, 117, 125, 0.2);
+}
+
+/* Category cloud on the index page */
+.category-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  line-height: 1.2;
+}
+.category-cloud a {
+  text-decoration: none;
+  color: #58a6ff;
+  font-weight: 600;
+}
