@@ -14,3 +14,11 @@ npm start
 The application listens on `http://localhost:5000`.
 
 > **Note**: The repository omits the `404.jpg` and `accessdenied.jpg` placeholders from `loradb/static`. Add your own copies if you want custom error images.
+
+## Initial admin account
+
+Create the first administrator account using the provided script:
+
+```bash
+node usersetup.js <username> <password>
+```
