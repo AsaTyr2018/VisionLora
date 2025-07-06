@@ -65,6 +65,52 @@ class Indexer {
     stmt.run(filename, categoryId);
     stmt.finalize();
   }
+
+  addCategory(name, cb) {
+    const stmt = this.db.prepare(`INSERT OR IGNORE INTO categories(name) VALUES(?)`);
+    stmt.run(name, function(err) {
+      if (cb) cb(err, this.lastID);
+    });
+    stmt.finalize();
+  }
+
+  deleteCategory(id, cb) {
+    this.db.serialize(() => {
+      this.db.run(`DELETE FROM categories WHERE id = ?`, [id]);
+      this.db.run(`DELETE FROM lora_category_map WHERE category_id = ?`, [id], cb || (() => {}));
+    });
+  }
+
+  listCategoriesWithCounts(cb) {
+    const sql = `SELECT c.id, c.name, COUNT(m.filename) as cnt
+                 FROM categories c LEFT JOIN lora_category_map m ON c.id = m.category_id
+                 GROUP BY c.id ORDER BY c.name`;
+    this.db.all(sql, cb);
+  }
+
+  getCategoriesFor(filename, cb) {
+    const sql = `SELECT c.name FROM categories c JOIN lora_category_map m ON c.id = m.category_id WHERE m.filename = ? ORDER BY c.name`;
+    this.db.all(sql, [filename], (err, rows) => {
+      if (err) return cb(err);
+      cb(null, rows.map(r => r.name));
+    });
+  }
+
+  searchByCategory(categoryId, query, cb) {
+    let sql = `SELECT l.filename, l.name, l.architecture, l.tags, l.base_model
+               FROM lora_index l JOIN lora_category_map m ON l.filename = m.filename
+               WHERE m.category_id = ?`;
+    const params = [categoryId];
+    if (query && query !== '*') {
+      sql += ' AND l MATCH ?';
+      params.push(query);
+    }
+    this.db.all(sql, params, cb);
+  }
+
+  removeMetadata(filename, cb) {
+    this.db.run(`DELETE FROM lora_index WHERE filename = ?`, [filename], cb || (() => {}));
+  }
 }
 
 module.exports = new Indexer();
