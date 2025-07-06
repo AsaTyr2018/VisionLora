@@ -66,6 +66,21 @@ class Indexer {
     stmt.finalize();
   }
 
+  unassignCategory(filename, categoryId, cb) {
+    this.db.run(
+      `DELETE FROM lora_category_map WHERE filename = ? AND category_id = ?`,
+      [filename, categoryId],
+      cb || (() => {})
+    );
+  }
+
+  getCategoryIdByName(name, cb) {
+    this.db.get(`SELECT id FROM categories WHERE name = ?`, [name], (err, row) => {
+      if (err) return cb(err);
+      cb(null, row ? row.id : null);
+    });
+  }
+
   addCategory(name, cb) {
     const stmt = this.db.prepare(`INSERT OR IGNORE INTO categories(name) VALUES(?)`);
     stmt.run(name, function(err) {
@@ -89,11 +104,11 @@ class Indexer {
   }
 
   getCategoriesFor(filename, cb) {
-    const sql = `SELECT c.name FROM categories c JOIN lora_category_map m ON c.id = m.category_id WHERE m.filename = ? ORDER BY c.name`;
-    this.db.all(sql, [filename], (err, rows) => {
-      if (err) return cb(err);
-      cb(null, rows.map(r => r.name));
-    });
+    const sql =
+      `SELECT c.id, c.name FROM categories c ` +
+      `JOIN lora_category_map m ON c.id = m.category_id ` +
+      `WHERE m.filename = ? ORDER BY c.name`;
+    this.db.all(sql, [filename], cb);
   }
 
   searchByCategory(categoryId, query, cb) {

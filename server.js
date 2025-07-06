@@ -74,7 +74,20 @@ app.get('/grid', (req, res) => {
   const q = req.query.q || '*';
   indexer.search(q, (err, rows) => {
     indexer.listCategories((err2, cats) => {
-      res.send(frontend.env.render('grid.html', { title: 'LoRA Gallery', entries: rows, query: q === '*' ? '' : q, categories: cats, selected_category: '', limit: 50, user: req.user }));
+      const entries = rows.map(r => {
+        const stem = path.parse(r.filename).name;
+        const preview = frontend.findPreviews(stem)[0] || null;
+        return { filename: r.filename, name: r.name, preview_url: preview };
+      });
+      res.send(frontend.env.render('grid.html', {
+        title: 'LoRA Gallery',
+        entries,
+        query: q === '*' ? '' : q,
+        categories: cats,
+        selected_category: '',
+        limit: 50,
+        user: req.user
+      }));
     });
   });
 });
@@ -85,7 +98,17 @@ app.get('/detail/:filename', (req, res) => {
   const entry = { filename, name: filename, metadata: {}, categories: [] };
   entry.previews = frontend.findPreviews(stem);
   indexer.getCategoriesFor(filename, (err, cats) => {
-    res.send(frontend.env.render('detail.html', { title: filename, entry, categories: cats || [], user: req.user }));
+    entry.categories = cats || [];
+    indexer.listCategories((e2, allCats) => {
+      res.send(
+        frontend.env.render('detail.html', {
+          title: filename,
+          entry,
+          categories: allCats || [],
+          user: req.user
+        })
+      );
+    });
   });
 });
 
@@ -129,6 +152,55 @@ app.post('/upload_previews', upload.array('files'), (req, res) => {
   });
 });
 
+app.post('/assign_category', (req, res) => {
+  const { filename, category_id } = req.body;
+  if (filename && category_id) {
+    indexer.assignCategory(filename, parseInt(category_id, 10));
+  }
+  res.redirect('/detail/' + filename);
+});
+
+app.post('/unassign_category', (req, res) => {
+  const { filename, category_id } = req.body;
+  if (filename && category_id) {
+    indexer.unassignCategory(filename, parseInt(category_id, 10));
+  }
+  res.redirect('/detail/' + filename);
+});
+
+app.post('/bulk_assign', (req, res) => {
+  let files = req.body.files || [];
+  if (!Array.isArray(files)) files = [files];
+  indexer.listCategories((err, cats) => {
+    res.send(frontend.env.render('bulk_assign.html', {
+      title: 'Add to Category',
+      files,
+      categories: cats,
+      user: req.user
+    }));
+  });
+});
+
+app.post('/assign_categories', (req, res) => {
+  let files = req.body.files || [];
+  if (!Array.isArray(files)) files = [files];
+  const { category_id, new_category } = req.body;
+  const assignAll = id => {
+    files.forEach(f => indexer.assignCategory(f, id));
+    res.redirect('/grid');
+  };
+  if (new_category && new_category.trim()) {
+    indexer.addCategory(new_category.trim(), (err, id) => {
+      if (err) return res.redirect('/grid');
+      assignAll(id);
+    });
+  } else if (category_id) {
+    assignAll(parseInt(category_id, 10));
+  } else {
+    res.redirect('/grid');
+  }
+});
+
 app.get('/category_admin', (req, res) => {
   indexer.listCategoriesWithCounts((err, cats) => {
     res.send(frontend.env.render('category_admin.html', { title: 'Categories', categories: cats, user: req.user }));
@@ -163,13 +235,22 @@ app.post('/admin/users/delete', (req, res) => {
 });
 
 app.get('/showcase', (req, res) => {
-  indexer.search('*', (err, rows) => {
-    const entries = rows.map(r => {
-      const stem = path.parse(r.filename).name;
-      const previews = frontend.findPreviews(stem);
-      return { filename: r.filename, name: r.name || r.filename, preview_url: previews[0] };
+  indexer.getCategoryIdByName('Public Viewing', (err, catId) => {
+    if (err || !catId) {
+      return res.send(frontend.env.render('showcase.html', { title: 'Model Showcase', entries: [], user: req.user }));
+    }
+    indexer.searchByCategory(catId, '*', (err2, rows) => {
+      const entries = rows.map(r => {
+        const stem = path.parse(r.filename).name;
+        const previews = frontend.findPreviews(stem);
+        return {
+          filename: r.filename,
+          name: r.name || r.filename,
+          preview_url: previews[0]
+        };
+      });
+      res.send(frontend.env.render('showcase.html', { title: 'Model Showcase', entries, user: req.user }));
     });
-    res.send(frontend.env.render('showcase.html', { title: 'Model Showcase', entries, user: req.user }));
   });
 });
 
