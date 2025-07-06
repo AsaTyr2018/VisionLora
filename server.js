@@ -18,8 +18,10 @@ app.use('/uploads', express.static(config.UPLOAD_DIR));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({ secret: config.SECRET_KEY, resave: false, saveUninitialized: false }));
 
-// simple auth middleware
-auth.createUser('admin', 'admin', 'admin');
+// initialize default admin user after DB is ready
+indexer.db.serialize(() => {
+  auth.createUser('admin', 'admin', 'admin');
+});
 
 app.use((req, res, next) => {
   if (!req.session.userId && !req.path.startsWith('/login')) {
@@ -91,4 +93,5 @@ app.post('/upload', upload.array('files'), (req, res) => {
   res.redirect('/grid');
 });
 
-app.listen(5000, () => console.log('Server running on http://localhost:5000'));
+const HOST = '0.0.0.0';
+app.listen(5000, HOST, () => console.log(`Server running on http://${HOST}:5000`));
