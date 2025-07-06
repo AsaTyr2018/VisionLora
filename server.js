@@ -8,6 +8,7 @@ const indexer = require('./indexer');
 const frontend = require('./frontend');
 const auth = require('./auth');
 const uploader = require('./uploader');
+const metadata = require('./metadata');
 
 const upload = multer({ dest: path.join(config.UPLOAD_DIR, '_tmp') });
 fs.mkdirSync(path.join(config.UPLOAD_DIR, '_tmp'), { recursive: true });
@@ -121,8 +122,9 @@ app.post('/upload', upload.array('files'), (req, res) => {
   req.files.forEach(f => {
     const dest = path.join(config.UPLOAD_DIR, f.originalname);
     fs.renameSync(f.path, dest);
-    saved.push({ filename: f.originalname });
-    indexer.addMetadata({ filename: f.originalname });
+    const meta = metadata.extractMetadata(dest);
+    saved.push(meta);
+    indexer.addMetadata(meta);
   });
   if (req.headers.accept && !req.headers.accept.includes('text/html')) {
     res.json(saved);
